@@ -1,9 +1,14 @@
 /* Kaokoko Service Worker
-   アプリの動作に必要な最小限のファイルをキャッシュし、オフラインでも開けるようにします。
-   ファイルを更新したときは CACHE_NAME のバージョン番号を上げてください（v1 → v2 など）。
-   そうすることで、古いキャッシュが破棄されて新しいファイルに置き換わります。
+   GitHubでファイルを更新したら、次に開いたときにすぐ新しい内容が反映されるようにしています。
+
+   方式：「ネットワーク優先」
+   - オンライン時：必ず最新のファイルを取得しに行く（＝更新がすぐ反映される）
+   - オフライン時：直前にキャッシュした内容を表示する（＝オフラインでも開ける）
+
+   CACHE_NAME はファイル整理用のラベルです。手動で番号を上げる必要はありませんが、
+   大きな変更をしたときの目印として上げておくと管理しやすくなります。
 */
-const CACHE_NAME = "kaokoko-cache-v1";
+const CACHE_NAME = "kaokoko-cache-v2";
 
 const APP_SHELL = [
   "./",
@@ -16,7 +21,7 @@ const APP_SHELL = [
   "./icons/apple-touch-icon.png"
 ];
 
-/* インストール時：アプリシェルを一括キャッシュ */
+/* インストール時：アプリシェルを一括キャッシュ（オフライン用の初期データ） */
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -25,7 +30,7 @@ self.addEventListener("install", (event) => {
   );
 });
 
-/* 有効化時：古いバージョンのキャッシュを削除 */
+/* 有効化時：古いバージョンのキャッシュを削除し、すぐにこのSWに切り替える */
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
@@ -38,23 +43,22 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-/* リクエスト時：キャッシュ優先、なければネットワーク、両方失敗したらindex.htmlを返す */
+/* リクエスト時：ネットワーク優先。取れた最新版は次回オフライン用にキャッシュへ保存。
+   オフラインで取得できない場合のみ、キャッシュ（最後にオンラインだった時点の内容）を使う。 */
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
 
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) return cached;
-
-      return fetch(event.request)
-        .then((response) => {
-          if (response && response.status === 200) {
-            const copy = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
-          }
-          return response;
-        })
-        .catch(() => caches.match("./index.html"));
-    })
+    fetch(event.request)
+      .then((response) => {
+        if (response && response.status === 200) {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+        }
+        return response;
+      })
+      .catch(() =>
+        caches.match(event.request).then((cached) => cached || caches.match("./index.html"))
+      )
   );
 });

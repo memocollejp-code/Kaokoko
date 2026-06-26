@@ -1,16 +1,28 @@
 "use strict";
 
-/* Service Worker registration（PWA化・オフライン対応） */
+/* Service Worker registration（PWA化・オフライン対応・自動更新） */
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./sw.js')
-      .then(reg => console.log('Service Worker registered', reg))
+      .then(reg => {
+        console.log('Service Worker registered', reg);
+        // ページを開いたタイミングで「新しいバージョンがあるか」をすぐ確認する
+        reg.update().catch(() => {});
+      })
       .catch(err => console.error('Service Worker registration failed', err));
+
+    // 新しいService Workerに切り替わったら、自動で1回だけ画面をリロードして最新版を表示する
+    let alreadyRefreshed = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (alreadyRefreshed) return;
+      alreadyRefreshed = true;
+      window.location.reload();
+    });
   });
 }
 
 /* ============================================================
-   Kaokoko v8 — 睡眠と心のバランス記録（PWA構成・複数ファイル分割）
+   Kaokoko v9 — 睡眠と心のバランス記録（PWA構成・自動更新対応）
    ============================================================ */
 
 /* ---- localStorage ラッパー（失敗時はメモリで継続）---- */
@@ -432,7 +444,7 @@ function updateReminderUI(){
    バックアップ / 復元 / 全消去
    ============================================================ */
 function exportData(){
-  const data={ app:"Kaokoko", version:8, exportedAt:new Date().toISOString(), diaries };
+  const data={ app:"Kaokoko", version:9, exportedAt:new Date().toISOString(), diaries };
   const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
   const url=URL.createObjectURL(blob);
   const a=document.createElement("a"); a.href=url; a.download=`kaokoko_backup_${todayStr()}.json`;
