@@ -1,4 +1,5 @@
 {
+  "id": "./",
   "name": "Kaokoko — ねむりとこころの記録",
   "short_name": "Kaokoko",
   "description": "睡眠時間とこころのバランスを、毎日かんたんに記録するセルフケア日記アプリ",
@@ -11,16 +12,17 @@
   "lang": "ja",
   "icons": [
     {
-      "src": "icons/icon-192.png",
+      "src": "icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icons/icon-512.png",
+      "src": "icon.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     }
   ]
 }
+
